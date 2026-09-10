@@ -34,6 +34,13 @@ export function getTasks(filters = {}) {
   if (filters.priority) {
     query.set('priority', filters.priority)
   }
+  if (filters.page) {
+    query.set('page', filters.page)
+  }
+
+  if (filters.per_page) {
+    query.set('per_page', filters.per_page)
+  }
 
   const suffix = query.toString() ? `?${query.toString()}` : ''
 
