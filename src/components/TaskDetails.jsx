@@ -18,16 +18,41 @@ function formatDate(value) {
 
 export default function TaskDetails({ taskId }) {
   const [task, setTask] = useState(null)
+  const [error, setError] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
+    let ignore = false
+    setError(false)
+
     getTask(taskId)
       .then((body) => {
-        setTask(body.data)
+        if (!ignore) {
+          setTask(body.data)
+        }
       })
-      .catch((error) => {
-        console.error(error)
+      .catch((requestError) => {
+        if (!ignore) {
+          console.error(requestError)
+          setError(true)
+        }
       })
-  }, [taskId])
+
+    return () => {
+      ignore = true
+    }
+  }, [taskId, reloadToken])
+
+  if (error) {
+    return (
+      <div className="task-details task-details-error">
+        <p>No se pudo cargar el detalle.</p>
+        <button type="button" onClick={() => setReloadToken((token) => token + 1)}>
+          Reintentar
+        </button>
+      </div>
+    )
+  }
 
   if (!task) {
     return <div className="task-details task-details-loading">Cargando detalle...</div>
