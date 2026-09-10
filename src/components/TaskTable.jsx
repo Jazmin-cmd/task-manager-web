@@ -23,19 +23,10 @@ const SORT_ACCESSORS = {
   due_date: (task) => (task.due_date ? new Date(task.due_date).getTime() : null)
 }
 
-const PAGE_SIZE = 10
-
-export default function TaskTable({ tasks, onEdit, onChanged }) {
+export default function TaskTable({ tasks, onEdit, onChanged, page, perPage, totalPages, totalRecords, onPageChange }) {
   const [openTaskId, setOpenTaskId] = useState(null)
   const [sortBy, setSortBy] = useState(null)
   const [sortDirection, setSortDirection] = useState('asc')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [tasksForPage, setTasksForPage] = useState(tasks)
-
-  if (tasks !== tasksForPage) {
-    setTasksForPage(tasks)
-    setCurrentPage(1)
-  }
 
   function handleSort(column) {
     if (sortBy === column) {
@@ -65,15 +56,12 @@ export default function TaskTable({ tasks, onEdit, onChanged }) {
       })
     : tasks
 
-  const totalRecords = sortedTasks.length
-  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE))
-  const safePage = Math.min(currentPage, totalPages)
-  const paginatedTasks = sortedTasks.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-  const firstRecord = totalRecords === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
-  const lastRecord = Math.min(safePage * PAGE_SIZE, totalRecords)
+  const paginatedTasks = sortedTasks
+  const firstRecord = totalRecords === 0 ? 0 : (page - 1) * perPage + 1
+  const lastRecord = Math.min(page * perPage, totalRecords)
 
-  function goToPage(page) {
-    setCurrentPage(Math.min(Math.max(page, 1), totalPages))
+  function goToPage(targetPage) {
+    onPageChange(Math.min(Math.max(targetPage, 1), totalPages))
   }
 
   function handleStatusChange(task, status) {
@@ -153,7 +141,6 @@ export default function TaskTable({ tasks, onEdit, onChanged }) {
                   </td>
                   {task.due_date ? (
                     <td className="task-meta" data-label="Fecha límite">
-                      {/* Display the due date in the format DD/MM/YYYY manteniendo los ceros a la izquierda */}
                       {new Date(task.due_date).toLocaleDateString('es-AR', {
                         day: '2-digit',
                         month: '2-digit',
@@ -203,19 +190,19 @@ export default function TaskTable({ tasks, onEdit, onChanged }) {
             <button
               type="button"
               className="secondary"
-              disabled={safePage === 1}
-              onClick={() => goToPage(safePage - 1)}
+              disabled={page === 1}
+              onClick={() => goToPage(page - 1)}
             >
               ‹ Anterior
             </button>
             <span className="pagination-current">
-              Página {safePage} de {totalPages}
+              Página {page} de {totalPages}
             </span>
             <button
               type="button"
               className="secondary"
-              disabled={safePage === totalPages}
-              onClick={() => goToPage(safePage + 1)}
+              disabled={page === totalPages}
+              onClick={() => goToPage(page + 1)}
             >
               Siguiente ›
             </button>

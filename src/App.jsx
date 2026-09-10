@@ -14,6 +14,8 @@ const EMPTY_FILTERS = {
 
 export default function App() {
   const [tasks, setTasks] = useState([])
+  const [meta, setMeta] = useState({ current_page: 1, per_page: 20, total: 0, last_page: 1 })
+  const [page, setPage] = useState(1)
   const [users, setUsers] = useState([])
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [formOpen, setFormOpen] = useState(false)
@@ -22,7 +24,7 @@ export default function App() {
   const [status, setStatus] = useState('loading')
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search)
   const hasLoadedOnce = useRef(false)
-  
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,17 +34,24 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [filters.search])
 
+  // Si cambian los filtros, volvemos a la página 1: si no, se puede pedir
+  // una página que ya no existe para el nuevo resultado filtrado.
+  useEffect(() => {
+    setPage(1)
+  }, [filters.status, filters.priority, debouncedSearch])
+
   useEffect(() => {
     let ignore = false
     if (!hasLoadedOnce.current) {
       setStatus('loading')
     }
-    const effectiveFilters = { ...filters, search: debouncedSearch }
+    const effectiveFilters = { ...filters, search: debouncedSearch, page }
 
     getTasks(effectiveFilters)
       .then((body) => {
         if(!ignore) {
           setTasks(body.data)
+          setMeta(body.meta ?? { current_page: 1, per_page: body.data.length, total: body.data.length, last_page: 1 })
           setStatus('ready')
           hasLoadedOnce.current = true
         }
@@ -57,7 +66,7 @@ export default function App() {
     return () => {
       ignore = true
     }
-  }, [filters.status,filters.priority,debouncedSearch, reloadToken])
+  }, [filters.status, filters.priority, debouncedSearch, page, reloadToken])
 
   useEffect(() => {
     getUsers()
@@ -132,7 +141,16 @@ export default function App() {
       )}
 
       {status === 'ready' && tasks.length > 0 && (
-        <TaskTable tasks={tasks} onEdit={openEditForm} onChanged={reloadTasks} />
+        <TaskTable
+          tasks={tasks}
+          onEdit={openEditForm}
+          onChanged={reloadTasks}
+          page={meta.current_page}
+          perPage={meta.per_page}
+          totalPages={meta.last_page}
+          totalRecords={meta.total}
+          onPageChange={setPage}
+        />
       )}
 
       {formOpen && (
