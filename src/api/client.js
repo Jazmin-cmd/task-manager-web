@@ -12,7 +12,9 @@ async function request(path, options = {}) {
   const body = await response.json()
 
   if (!response.ok) {
-    throw new Error(body.message || 'No se pudo completar la petición')
+    const error = new Error(body.message || 'No se pudo completar la petición')
+    error.fieldErrors = body.errors || null
+    throw error
   }
 
   return body

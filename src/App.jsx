@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { getTasks, getUsers } from './api/client.js'
 import TaskFilters from './components/TaskFilters.jsx'
 import TaskFormModal from './components/TaskFormModal.jsx'
 import TaskTable from './components/TaskTable.jsx'
+import Swal from 'sweetalert2'
 
 const EMPTY_FILTERS = {
   search: '',
@@ -18,16 +19,45 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false)
   const [taskBeingEdited, setTaskBeingEdited] = useState(null)
   const [reloadToken, setReloadToken] = useState(0)
+  const [status, setStatus] = useState('loading')
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search)
+  const hasLoadedOnce = useRef(false)
+  
 
   useEffect(() => {
-    getTasks(filters)
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filters.search)
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [filters.search])
+
+  useEffect(() => {
+    let ignore = false
+    if (!hasLoadedOnce.current) {
+      setStatus('loading')
+    }
+    const effectiveFilters = { ...filters, search: debouncedSearch }
+
+    getTasks(effectiveFilters)
       .then((body) => {
-        setTasks(body.data)
+        if(!ignore) {
+          setTasks(body.data)
+          setStatus('ready')
+          hasLoadedOnce.current = true
+        }
+
       })
       .catch((error) => {
-        console.error(error)
+        if(!ignore) {
+          console.error(error)
+          setStatus('error')
+        }
       })
-  }, [filters, reloadToken])
+    return () => {
+      ignore = true
+    }
+  }, [filters.status,filters.priority,debouncedSearch, reloadToken])
 
   useEffect(() => {
     getUsers()
@@ -38,6 +68,23 @@ export default function App() {
         console.error(error)
       })
   }, [])
+
+
+  function handleSaved() {
+    setFormOpen(false)
+    setTaskBeingEdited(null)
+    reloadTasks()
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Tarea guardada',
+      toast: true,
+      text: 'La tarea se guardó correctamente.',
+      timer: 1000,
+      showConfirmButton: false,
+      timerProgressBar: true,
+    })
+  }
 
   function reloadTasks() {
     setReloadToken((token) => token + 1)
@@ -57,28 +104,36 @@ export default function App() {
     setFormOpen(true)
   }
 
-  function handleSaved() {
-    setFormOpen(false)
-    setTaskBeingEdited(null)
-    reloadTasks()
-  }
 
   return (
     <div className="app">
       <div className="header">
         <h1>Gestor de Tareas</h1>
-        <button type="button" onClick={openCreateForm}>
-          Nueva tarea
-        </button>
       </div>
 
       <TaskFilters
         filters={filters}
         onChange={handleFilterChange}
         onClear={() => setFilters(EMPTY_FILTERS)}
+        onCreate={openCreateForm}
       />
 
-      <TaskTable tasks={tasks} onEdit={openEditForm} onChanged={reloadTasks} />
+      {status === 'loading' && <p className="state-message">Cargando tareas...</p>}
+
+      {status === 'error' && (
+        <div className="state-message state-error">
+          <p>No se pudieron cargar las tareas.</p>
+          <button type="button" onClick={reloadTasks}>Reintentar</button>
+        </div>
+      )}
+
+      {status === 'ready' && tasks.length === 0 && (
+        <p className="state-message">No se encontraron tareas con estos filtros.</p>
+      )}
+
+      {status === 'ready' && tasks.length > 0 && (
+        <TaskTable tasks={tasks} onEdit={openEditForm} onChanged={reloadTasks} />
+      )}
 
       {formOpen && (
         <TaskFormModal

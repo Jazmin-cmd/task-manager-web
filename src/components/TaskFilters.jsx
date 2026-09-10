@@ -1,6 +1,6 @@
 import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS } from '../labels.js'
 
-export default function TaskFilters({ filters, onChange, onClear }) {
+export default function TaskFilters({ filters, onChange, onClear, onCreate }) {
   return (
     <div className="filters">
       <input
@@ -36,6 +36,10 @@ export default function TaskFilters({ filters, onChange, onClear }) {
 
       <button type="button" onClick={onClear}>
         Limpiar
+      </button>
+
+      <button type="button" className="btn-create" onClick={onCreate}>
+        Nueva tarea
       </button>
     </div>
   )
