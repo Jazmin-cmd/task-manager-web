@@ -39,44 +39,29 @@ export default function TaskFormModal({ task, users, onClose, onSaved }) {
   function handleSubmit(event) {
     event.preventDefault()
     setError(null)
-    setIsSubmitting(true)
 
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() === '' ? null : form.description.trim(),
-      status: form.status,
-      priority: form.priority,
-      due_date: form.due_date === '' ? null : form.due_date,
-      assigned_user_id: form.assigned_user_id === '' ? null : Number(form.assigned_user_id),
-    }
-
-    const saving = task ? updateTask(task.id, payload) : createTask(payload)
     const trimmedTitle = form.title.trim()
     const trimmedDescription = form.description.trim()
     const hasValidChars = /[\p{L}\p{N}]/u.test(trimmedTitle)
     const CURRENT_YEAR_START = `${new Date().getFullYear()}-01-01`
 
-    if(trimmedTitle < 5) {
+    if (trimmedTitle.length < 5) {
       setError('El título debe tener al menos 5 caracteres.')
-      setIsSubmitting(false)
       return
     }
-    
+
     if (!hasValidChars) {
       setError('El título debe contener al menos una letra o número.')
-      setIsSubmitting(false)
       return
     }
 
-    if(trimmedDescription < 5) {
+    if (trimmedDescription.length < 5) {
       setError('La descripción debe tener al menos 5 caracteres.')
-      setIsSubmitting(false)
       return
     }
 
-    if(trimmedDescription.length > 2000) {
+    if (trimmedDescription.length > 2000) {
       setError('La descripción no puede superar los 2000 caracteres.')
-      setIsSubmitting(false)
       return
     }
 
@@ -90,6 +75,19 @@ export default function TaskFormModal({ task, users, onClose, onSaved }) {
       return
     }
 
+    setIsSubmitting(true)
+
+    const payload = {
+      title: trimmedTitle,
+      description: trimmedDescription === '' ? null : trimmedDescription,
+      status: form.status,
+      priority: form.priority,
+      due_date: form.due_date === '' ? null : form.due_date,
+      assigned_user_id: form.assigned_user_id === '' ? null : Number(form.assigned_user_id),
+    }
+
+    const saving = task ? updateTask(task.id, payload) : createTask(payload)
+
     saving
       .then(() => {
         onSaved()
@@ -102,6 +100,8 @@ export default function TaskFormModal({ task, users, onClose, onSaved }) {
         } else {
           setError(requestError.message)
         }
+      })
+      .finally(() => {
         setIsSubmitting(false)
       })
   }
